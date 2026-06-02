@@ -1,0 +1,191 @@
+CREATE DATABASE Hospital_Management;
+USE Hospital_Management;
+CREATE TABLE Doctors(
+    doctor_id INT AUTO_INCREMENT PRIMARY KEY,
+    doctor_name VARCHAR(100),
+    specialization VARCHAR(100),
+    phone VARCHAR(15),
+    experience INT
+);
+CREATE TABLE Patients(
+    patient_id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_name VARCHAR(100),
+    age INT,
+    gender VARCHAR(10),
+    phone VARCHAR(15),
+    address VARCHAR(200)
+);
+CREATE TABLE Appointments(
+    appointment_id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_id INT,
+    doctor_id INT,
+    appointment_date DATE,
+    appointment_time TIME,
+    status VARCHAR(20),
+    FOREIGN KEY(patient_id)
+    REFERENCES Patients(patient_id),
+    FOREIGN KEY(doctor_id)
+    REFERENCES Doctors(doctor_id)
+);
+CREATE TABLE Prescriptions(
+    prescription_id INT AUTO_INCREMENT PRIMARY KEY,
+    appointment_id INT,
+    medicine VARCHAR(100),
+    dosage VARCHAR(100),
+    notes VARCHAR(200),
+    FOREIGN KEY(appointment_id)
+    REFERENCES Appointments(appointment_id)
+);
+CREATE TABLE Billing(
+    bill_id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_id INT,
+    amount DECIMAL(10,2),
+    payment_status VARCHAR(20),
+    bill_date DATE,
+    FOREIGN KEY(patient_id)
+    REFERENCES Patients(patient_id)
+);
+INSERT INTO Doctors
+(doctor_name,specialization,phone,experience)
+VALUES
+('Dr Ravi','Cardiology','9876543210',10),
+('Dr Meena','Dermatology','9876543211',6),
+('Dr Kumar','Neurology','9876543212',8);
+INSERT INTO Patients
+(patient_name,age,gender,phone,address)
+VALUES
+('Arun',30,'Male','9000011111','Chennai'),
+('Priya',25,'Female','9000022222','Madurai'),
+('Rahul',40,'Male','9000033333','Coimbatore');
+INSERT INTO Appointments
+(patient_id,doctor_id,
+appointment_date,
+appointment_time,status)
+VALUES
+(1,1,'2026-06-05','10:00:00','Completed'),
+(2,2,'2026-06-06','11:00:00','Pending'),
+(3,3,'2026-06-07','12:00:00','Completed');
+INSERT INTO Prescriptions
+(appointment_id,medicine,dosage,notes)
+VALUES
+(1,'Paracetamol',
+'2 times daily','Take after food'),
+(3,'Vitamin D',
+'1 tablet daily','Morning');
+INSERT INTO Billing
+(patient_id,amount,payment_status,bill_date)
+VALUES
+(1,1500,'Paid','2026-06-05'),
+(2,2000,'Pending','2026-06-06'),
+(3,3000,'Paid','2026-06-07');
+SELECT * FROM Patients;
+SELECT * FROM Doctors;
+SELECT
+a.appointment_id,
+p.patient_name,
+d.doctor_name,
+a.appointment_date,
+a.status
+FROM Appointments a
+JOIN Patients p
+ON a.patient_id=p.patient_id
+JOIN Doctors d
+ON a.doctor_id=d.doctor_id;
+SELECT *
+FROM Appointments
+WHERE status='Pending';
+SELECT *
+FROM Billing
+WHERE payment_status='Paid';
+SELECT SUM(amount)
+AS Total_Revenue
+FROM Billing
+WHERE payment_status='Paid';
+SELECT COUNT(*)
+AS Total_Patients
+FROM Patients;
+SELECT
+d.doctor_name,
+COUNT(a.patient_id)
+AS Total_Patients
+FROM Doctors d
+LEFT JOIN Appointments a
+ON d.doctor_id=a.doctor_id
+GROUP BY d.doctor_name;
+CREATE VIEW Appointment_View AS
+SELECT
+a.appointment_id,
+p.patient_name,
+d.doctor_name,
+a.appointment_date,
+a.status
+FROM Appointments a
+JOIN Patients p
+ON a.patient_id=p.patient_id
+JOIN Doctors d
+ON a.doctor_id=d.doctor_id;
+SELECT * FROM Appointment_View;
+DELIMITER //
+
+CREATE PROCEDURE GetPatientDetails(
+IN pid INT
+)
+BEGIN
+SELECT *
+FROM Patients
+WHERE patient_id=pid;
+END //
+
+DELIMITER ;
+CALL GetPatientDetails(1);
+DELIMITER //
+
+CREATE FUNCTION CalculateGST(
+bill DECIMAL(10,2)
+)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+RETURN bill*0.18;
+END //
+
+DELIMITER ;
+SELECT
+amount,
+CalculateGST(amount)
+AS GST
+FROM Billing;
+DELIMITER //
+
+CREATE TRIGGER bill_date_trigger
+BEFORE INSERT
+ON Billing
+FOR EACH ROW
+BEGIN
+SET NEW.bill_date=CURDATE();
+END //
+
+DELIMITER ;
+CREATE INDEX idx_patient_name
+ON Patients(patient_name);
+SELECT *
+FROM Billing
+ORDER BY amount DESC
+LIMIT 1;
+SELECT
+doctor_id,
+COUNT(patient_id)
+AS Total
+FROM Appointments
+GROUP BY doctor_id
+HAVING COUNT(patient_id)>1;
+SELECT
+p.patient_name,
+a.appointment_date,
+d.doctor_name
+FROM Patients p
+JOIN Appointments a
+ON p.patient_id=a.patient_id
+JOIN Doctors d
+ON d.doctor_id=a.doctor_id
+ORDER BY appointment_date;
